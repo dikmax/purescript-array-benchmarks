@@ -8,7 +8,7 @@ import Data.Monoid.Additive (Additive(..))
 import Data.Monoid.Multiplicative (Multiplicative(..))
 import Data.Newtype (ala)
 import Test.QuickCheck.Arbitrary (arbitrary)
-import Test.QuickCheck.Gen (vectorOf)
+import Test.QuickCheck.Gen (vectorOf, chooseInt)
 import Benchotron.Core (Benchmark, BenchEffects, benchFn, mkBenchmark)
 import Benchotron.UI.Console (runSuite)
 
@@ -16,6 +16,9 @@ foreign import concatDefault :: forall a. Array (Array a) -> Array a
 foreign import concatApply :: forall a. Array (Array a) -> Array a
 foreign import concatCall :: forall a. Array (Array a) -> Array a
 foreign import concatChunks :: forall a. Array (Array a) -> Array a
+
+foreign import replicate :: forall a. Int -> a -> Array a
+foreign import replicateNew :: forall a. Int -> a -> Array a
 
 benchConcat :: Benchmark
 benchConcat = mkBenchmark
@@ -92,10 +95,25 @@ benchConcatLargeOfSmall2 = mkBenchmark
                ]
   }
 
+benchReplicate :: Benchmark
+benchReplicate = mkBenchmark
+  { slug: "replicate"
+  , title: "replicate value"
+  , sizes: (0..10) <#> (_ * 1000000)
+  , sizeInterpretation: "Number of items"
+  , inputsPerSize: 1
+  , gen: \n -> chooseInt n n
+  , functions: [ benchFn "old" (\n -> replicate n 1)
+               , benchFn "new" (\n -> replicateNew n 1)
+               ]
+  }
+
+
 main :: forall eff. Eff (BenchEffects eff) Unit
 main = runSuite [ benchConcat
                 , benchConcat2
                 , benchConcatSmallOfLarge
                 , benchConcatLargeOfSmall
                 , benchConcatLargeOfSmall2
+                , benchReplicate
                 ]
